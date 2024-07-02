@@ -8,21 +8,34 @@ def check_ssl(domain):
     return result.stdout
 
 def check_security_headers(url):
-    response = requests.get(url)
-    headers = response.headers
+    try:
+        response = requests.get(url, timeout=10)
+        headers = response.headers
 
-    security_headers = {
-        'Content-Security-Policy': headers.get('Content-Security-Policy', 'Missing'),
-        'Strict-Transport-Security': headers.get('Strict-Transport-Security', 'Missing'),
-        'X-Content-Type-Options': headers.get('X-Content-Type-Options', 'Missing'),
-        'X-Frame-Options': headers.get('X-Frame-Options', 'Missing'),
-        'X-XSS-Protection': headers.get('X-XSS-Protection', 'Missing'),
-        'Referrer-Policy': headers.get('Referrer-Policy', 'Missing'),
-        'Permissions-Policy': headers.get('Permissions-Policy', 'Missing'),
-        'Expect-CT': headers.get('Expect-CT', 'Missing')
-    }
+        security_headers = {
+            'Content-Security-Policy': headers.get('Content-Security-Policy', 'Missing'),
+            'Strict-Transport-Security': headers.get('Strict-Transport-Security', 'Missing'),
+            'X-Content-Type-Options': headers.get('X-Content-Type-Options', 'Missing'),
+            'X-Frame-Options': headers.get('X-Frame-Options', 'Missing'),
+            'X-XSS-Protection': headers.get('X-XSS-Protection', 'Missing'),
+            'Referrer-Policy': headers.get('Referrer-Policy', 'Missing'),
+            'Permissions-Policy': headers.get('Permissions-Policy', 'Missing'),
+            'Expect-CT': headers.get('Expect-CT', 'Missing')
+        }
 
-    return security_headers
+        return security_headers
+    except requests.RequestException as e:
+        print(f"Failed to fetch headers for {url}: {e}")
+        return {
+            'Content-Security-Policy': 'Error',
+            'Strict-Transport-Security': 'Error',
+            'X-Content-Type-Options': 'Error',
+            'X-Frame-Options': 'Error',
+            'X-XSS-Protection': 'Error',
+            'Referrer-Policy': 'Error',
+            'Permissions-Policy': 'Error',
+            'Expect-CT': 'Error'
+        }
 
 def process_url(url):
     parsed_url = urlparse(url)
@@ -41,7 +54,10 @@ def process_url(url):
         return
 
     # Check SSL
-    ssl_report = check_ssl(domain)
+    try:
+        ssl_report = check_ssl(domain)
+    except subprocess.CalledProcessError as e:
+        ssl_report = f"Error running sslyze: {e}"
 
     # Check Security Headers
     security_headers = check_security_headers(url)
