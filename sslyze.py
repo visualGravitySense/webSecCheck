@@ -1,6 +1,7 @@
+import csv
 import subprocess
 import requests
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 def check_ssl(domain):
     result = subprocess.run(['sslyze', '--regular', domain], capture_output=True, text=True)
@@ -23,20 +24,49 @@ def check_security_headers(url):
 
     return security_headers
 
-def main():
-    url = 'https://aveda.ee'
-    domain = urlparse(url).netloc
+def process_url(url):
+    parsed_url = urlparse(url)
+    if not parsed_url.scheme:
+        url = urljoin("https://", url)
+        parsed_url = urlparse(url)
+
+    domain = parsed_url.netloc
+
+    # Debugging information
+    print(f"Parsed URL: {parsed_url.geturl()}")
+    print(f"Domain: {domain}")
+
+    if not domain:
+        print(f"Invalid URL: {url}")
+        return
 
     # Check SSL
-    print("Checking SSL for:", domain)
     ssl_report = check_ssl(domain)
-    print(ssl_report)
 
     # Check Security Headers
-    print("Checking Security Headers for:", url)
     security_headers = check_security_headers(url)
+
+    # Prepare report content
+    report_content = f"SSL Report for {domain}:\n{ssl_report}\n\n"
+    report_content += f"Security Headers for {url}:\n"
     for header, value in security_headers.items():
-        print(f"{header}: {value}")
+        report_content += f"{header}: {value}\n"
+
+    # Save report to file
+    report_filename = f"{domain}_report.txt"
+    with open(report_filename, 'w') as report_file:
+        report_file.write(report_content)
+
+def main():
+    csv_filename = 'sport.csv'
+
+    with open(csv_filename, newline='') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        for row in csv_reader:
+            url = row[0].strip()
+            if url and not url.startswith("#"):
+                print(f"Processing URL: {url}")
+                process_url(url)
 
 if __name__ == "__main__":
     main()
